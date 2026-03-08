@@ -1,0 +1,66 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: tb-config
+  namespace: iot-gateway
+data:
+  DATABASE_TS_TYPE: "sql"
+  # Pointing directly to our Azure Flexible Server FQDN
+  SPRING_DATASOURCE_URL: "jdbc:postgresql://iot-gateway-pg-psdtopicy.postgres.database.azure.com:5432/postgres?sslmode=require"
+  SPRING_DATASOURCE_USERNAME: "tbadmin"
+  TB_QUEUE_TYPE: "in-memory" 
+  INSTALL_TB: "true" # Instructs TB to setup the schema on first boot
+  LOAD_DEMO: "true"  # Loads default tenant profiles and dashboards
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: tb-secret
+  namespace: iot-gateway
+type: Opaque
+stringData:
+  SPRING_DATASOURCE_PASSWORD: "PsdtopicyGroup2!"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: thingsboard
+  namespace: iot-gateway
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: thingsboard
+  template:
+    metadata:
+      labels:
+        app: thingsboard
+    spec:
+      containers:
+      - name: thingsboard
+        image: thingsboard/tb-postgres:3.8.1 # Standard lightweight image for external DBs
+        ports:
+        - containerPort: 9090
+        - containerPort: 1883 # MQTT
+        envFrom:
+        - configMapRef:
+            name: tb-config
+        - secretRef:
+            name: tb-secret
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: thingsboard-svc
+  namespace: iot-gateway
+spec:
+  type: ClusterIP
+  ports:
+  - name: http
+    port: 9090
+    targetPort: 9090
+  - name: mqtt
+    port: 1883
+    targetPort: 1883
+  selector:
+    app: thingsboard

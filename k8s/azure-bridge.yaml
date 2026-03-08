@@ -1,0 +1,83 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: azure-bridge-script
+  namespace: iot-gateway
+data:
+  bridge.py: |
+    import asyncio
+    import json
+    import os
+    import paho.mqtt.client as mqtt
+    from azure.eventhub.aio import EventHubConsumerClient
+
+    # Credentials injected via environment variables
+    EVENTHUB_STR = os.environ["EVENTHUB_CONNECTION_STRING"]
+    TB_TOKEN = os.environ["TB_GATEWAY_TOKEN"]
+    TB_HOST = "thingsboard-svc" # Internal Kubernetes DNS name for ThingsBoard
+    
+    # Setup MQTT Client
+    mqtt_client = mqtt.Client()
+    mqtt_client.username_pw_set(TB_TOKEN)
+    mqtt_client.connect(TB_HOST, 1883, 60)
+    mqtt_client.loop_start()
+
+    async def on_event(partition_context, event):
+        # Extract the device ID from Azure's metadata
+        device_id = event.system_properties[b'iothub-connection-device-id'].decode('utf-8')
+        payload = json.loads(event.body_as_str(encoding='UTF-8'))
+        
+        # Package for ThingsBoard Gateway API
+        tb_payload = {
+            device_id: [payload]
+        }
+        
+        print(f"Forwarding to ThingsBoard: {tb_payload}")
+        mqtt_client.publish("v1/gateway/telemetry", json.dumps(tb_payload))
+        await partition_context.update_checkpoint(event)
+
+    async def main():
+        print("Starting Azure-to-ThingsBoard Bridge...")
+        consumer = EventHubConsumerClient.from_connection_string(
+            conn_str=EVENTHUB_STR,
+            consumer_group="$Default"
+        )
+        async with consumer:
+            await consumer.receive(on_event=on_event, starting_position="-1")
+
+    if __name__ == '__main__':
+        asyncio.run(main())
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: azure-bridge
+  namespace: iot-gateway
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: azure-bridge
+  template:
+    metadata:
+      labels:
+        app: azure-bridge
+    spec:
+      containers:
+      - name: python-bridge
+        image: python:3.10-slim
+        # Install SDKs and run the script from the ConfigMap
+        command: ["/bin/sh", "-c"]
+        args: ["pip install azure-eventhub paho-mqtt && python /app/bridge.py"]
+        env:
+        - name: EVENTHUB_CONNECTION_STRING
+          value: "Endpoint=sb://ihsuprodhkres012dednamespace.servicebus.windows.net/;SharedAccessKeyName=iothubowner;SharedAccessKey=LVRabp0EArU1bMP1m5GJaeovowEWs8gZZAIoTDkAP1M=;EntityPath=iothub-ehub-iot-gatewa-57799806-5103867359"
+        - name: TB_GATEWAY_TOKEN
+          value: "abcl959PSHpwweIhMRlm"
+        volumeMounts:
+        - name: script-volume
+          mountPath: /app
+      volumes:
+      - name: script-volume
+        configMap:
+          name: azure-bridge-script
