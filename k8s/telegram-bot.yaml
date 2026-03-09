@@ -1,0 +1,30 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: telegram-bot
+  namespace: iot-gateway
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: telegram-bot
+  template:
+    metadata:
+      labels:
+        app: telegram-bot
+    spec:
+      containers:
+      - name: telegram-bot
+        image: iotgatewayacrpsdtopicy.azurecr.io/telegram-bot:v2
+        imagePullPolicy: Always
+        env:
+        # ThingsBoard Internal K8s Address
+        - name: MQTT_BROKER
+          value: "thingsboard-svc"
+        - name: MQTT_PORT
+          value: "1883"
+        # Telegram Credentials
+        - name: TELEGRAM_TOKEN
+          value: ""
+        - name: TELEGRAM_CHAT_ID
+          value: ""

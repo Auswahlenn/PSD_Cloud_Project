@@ -1,0 +1,25 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ml-predictor
+  namespace: iot-gateway
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ml-predictor
+  template:
+    metadata:
+      labels:
+        app: ml-predictor
+    spec:
+      containers:
+      - name: ml-predictor
+        image: iotgatewayacrpsdtopicy.azurecr.io/ml-model:v1
+        imagePullPolicy: Always
+        env:
+        # ThingsBoard internal K8s address
+        - name: THINGSBOARD_HOST
+          value: "thingsboard-svc"
+        - name: THINGSBOARD_PORT
+          value: "1883"
