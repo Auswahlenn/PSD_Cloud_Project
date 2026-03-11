@@ -228,6 +228,9 @@ def main():
     
     # Setup MQTT client
     client = mqtt.Client()
+
+    client.username_pw_set("thingsboard", "SecureServer123!")
+    
     client.on_connect = on_connect
     client.on_message = on_message
     

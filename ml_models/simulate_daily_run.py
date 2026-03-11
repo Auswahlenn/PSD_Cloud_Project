@@ -23,6 +23,7 @@ MQTT_TOPIC = "ai/forecast/temperature"
 def publish_to_mqtt(prediction):
     try:
         client = mqtt.Client()
+        client.username_pw_set("thingsboard", "SecureServer123!")
         client.connect(MQTT_BROKER, MQTT_PORT, 60)
         
         payload = {

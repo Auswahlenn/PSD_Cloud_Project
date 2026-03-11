@@ -1,52 +1,56 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: azure-bridge-script
+  name: bridge-script
   namespace: iot-gateway
 data:
   bridge.py: |
-    import asyncio
-    import json
-    import os
     import paho.mqtt.client as mqtt
-    from azure.eventhub.aio import EventHubConsumerClient
+    import ssl
+    import os
+    import json
+    import time
 
-    # Credentials injected via environment variables
-    EVENTHUB_STR = os.environ["EVENTHUB_CONNECTION_STRING"]
-    TB_TOKEN = os.environ["TB_GATEWAY_TOKEN"]
-    TB_HOST = "thingsboard-svc" # Internal Kubernetes DNS name for ThingsBoard
-    
-    # Setup MQTT Client
-    mqtt_client = mqtt.Client()
-    mqtt_client.username_pw_set(TB_TOKEN)
-    mqtt_client.connect(TB_HOST, 1883, 60)
-    mqtt_client.loop_start()
+    CLOUD_HOST = os.getenv("CLOUD_HOST")
+    CLOUD_USER = os.getenv("CLOUD_USER")
+    CLOUD_PASS = os.getenv("CLOUD_PASS")
+    INTERNAL_HOST = "thingsboard-svc"
 
-    async def on_event(partition_context, event):
-        # Extract the device ID from Azure's metadata
-        device_id = event.system_properties[b'iothub-connection-device-id'].decode('utf-8')
-        payload = json.loads(event.body_as_str(encoding='UTF-8'))
-        
-        # Package for ThingsBoard Gateway API
-        tb_payload = {
-            device_id: [payload]
-        }
-        
-        print(f"Forwarding to ThingsBoard: {tb_payload}")
-        mqtt_client.publish("v1/gateway/telemetry", json.dumps(tb_payload))
-        await partition_context.update_checkpoint(event)
+    def on_connect(client, userdata, flags, rc):
+        if rc == 0:
+            print("✅ Connected to HiveMQ Cloud!")
+            client.subscribe("v1/gateway/telemetry")
+        else:
+            print(f"❌ Cloud Connection failed: {rc}")
 
-    async def main():
-        print("Starting Azure-to-ThingsBoard Bridge...")
-        consumer = EventHubConsumerClient.from_connection_string(
-            conn_str=EVENTHUB_STR,
-            consumer_group="$Default"
-        )
-        async with consumer:
-            await consumer.receive(on_event=on_event, starting_position="-1")
+    def on_message(client, userdata, msg):
+        try:
+            payload = json.loads(msg.payload.decode())
+            # payload is {"Cloud-Simulator-01": [{"values": {"temp": 25}}]}
+            for device_name, data_list in payload.items():
+                for entry in data_list:
+                    values = entry.get("values", entry) # Handle both nested and flat
+                    # Forward ONLY the values to make it flat in ThingsBoard
+                    print(f"🚀 Flattening & Forwarding for {device_name}: {values}")
+                    internal_client.publish(f"v1/gateway/telemetry", json.dumps({device_name: [ {"values": values} ]}))
+        except Exception as e:
+            print(f"❌ Error: {e}")
 
-    if __name__ == '__main__':
-        asyncio.run(main())
+    # Internal Client
+    internal_client = mqtt.Client()
+    internal_client.username_pw_set("BhDbmIyXuWMR0ty9dqOD") # Use the Bridge Gateway Token
+    internal_client.connect(INTERNAL_HOST, 1883)
+    internal_client.loop_start()
+
+    # Cloud Client
+    cloud_client = mqtt.Client()
+    cloud_client.username_pw_set(CLOUD_USER, CLOUD_PASS)
+    cloud_client.tls_set(cert_reqs=ssl.CERT_REQUIRED)
+    cloud_client.on_connect = on_connect
+    cloud_client.on_message = on_message
+
+    cloud_client.connect(CLOUD_HOST, 8883)
+    cloud_client.loop_forever()
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -64,20 +68,24 @@ spec:
         app: azure-bridge
     spec:
       containers:
-      - name: python-bridge
+      - name: bridge
         image: python:3.10-slim
-        # Install SDKs and run the script from the ConfigMap
         command: ["/bin/sh", "-c"]
-        args: ["pip install azure-eventhub paho-mqtt && python /app/bridge.py"]
+        args:
+          - |
+            pip install paho-mqtt==1.6.1
+            python -u /app/bridge.py
         env:
-        - name: EVENTHUB_CONNECTION_STRING
-          value: "Endpoint=sb://ihsuprodhkres012dednamespace.servicebus.windows.net/;SharedAccessKeyName=iothubowner;SharedAccessKey=LVRabp0EArU1bMP1m5GJaeovowEWs8gZZAIoTDkAP1M=;EntityPath=iothub-ehub-iot-gatewa-57799806-5103867359"
-        - name: TB_GATEWAY_TOKEN
-          value: "abcl959PSHpwweIhMRlm"
+        - name: CLOUD_HOST
+          value: "c6f88df75120418999bec7e5d6aed17a.s1.eu.hivemq.cloud" 
+        - name: CLOUD_USER
+          value: "Psdtopicy"
+        - name: CLOUD_PASS
+          value: "Psdtopicygroup2"
         volumeMounts:
-        - name: script-volume
+        - name: script-vol
           mountPath: /app
       volumes:
-      - name: script-volume
+      - name: script-vol
         configMap:
-          name: azure-bridge-script
+          name: bridge-script

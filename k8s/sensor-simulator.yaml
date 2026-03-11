@@ -1,0 +1,103 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: simulator-script
+  namespace: iot-gateway
+data:
+  publisher.py: |
+    import paho.mqtt.client as mqtt
+    import ssl
+    import json
+    import time
+    import random
+    import os
+    import uuid
+
+    # Credentials
+    MQTT_BROKER = os.getenv("CLOUD_HOST")
+    MQTT_USER = os.getenv("CLOUD_USER")
+    MQTT_PASSWORD = os.getenv("CLOUD_PASS")
+    MQTT_TOPIC = "v1/gateway/telemetry"
+
+    # 1. Unique ID prevents "Deadlock" with old pods
+    client_id = f"AzureSim-{uuid.uuid4().hex[:6]}"
+    client = mqtt.Client(client_id=client_id)
+    
+    client.username_pw_set(MQTT_USER, MQTT_PASSWORD)
+    client.tls_set(cert_reqs=ssl.CERT_REQUIRED)
+
+    def on_connect(client, userdata, flags, rc):
+        if rc == 0:
+            print(f"✅ SUCCESS: Connected to HiveMQ as {client_id}")
+        else:
+            print(f"❌ REJECTED: Connection failed with code {rc}")
+
+    client.on_connect = on_connect
+
+    print(f"☁️ Starting Handshake with {MQTT_BROKER}...")
+    try:
+        # Connect with a 60s timeout
+        client.connect(MQTT_BROKER, 8883, 60)
+        client.loop_start() 
+
+        while True:
+            if client.is_connected():
+                temp = round(random.uniform(20.0, 30.0), 2)
+                # Correct ThingsBoard Gateway Format
+                payload = {
+                    "Cloud-Simulator-01": [
+                        {
+                            "values": {
+                                "temperature": temp,
+                                "status": "active"
+                            }
+                        }
+                    ]
+                }
+                client.publish(MQTT_TOPIC, json.dumps(payload), qos=1)
+                print(f"🚀 Sent to Cloud: {temp}°C")
+            else:
+                print("⏳ Connection lost, retrying...")
+            
+            time.sleep(10)
+            
+    except Exception as e:
+        print(f"💥 Script Error: {e}")
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sensor-simulator
+  namespace: iot-gateway
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: sensor-simulator
+  template:
+    metadata:
+      labels:
+        app: sensor-simulator
+    spec:
+      containers:
+      - name: simulator
+        image: python:3.10-slim
+        command: ["/bin/sh", "-c"]
+        args:
+          - |
+            pip install paho-mqtt==1.6.1
+            python -u /app/publisher.py
+        env:
+        - name: CLOUD_HOST
+          value: "c6f88df75120418999bec7e5d6aed17a.s1.eu.hivemq.cloud" 
+        - name: CLOUD_USER
+          value: "Psdtopicy"
+        - name: CLOUD_PASS
+          value: "Psdtopicygroup2"
+        volumeMounts:
+        - name: script-vol
+          mountPath: /app
+      volumes:
+      - name: script-vol
+        configMap:
+          name: simulator-script
