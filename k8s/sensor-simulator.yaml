@@ -12,6 +12,7 @@ data:
     import random
     import os
     import uuid
+    from datetime import datetime
 
     # Credentials
     MQTT_BROKER = os.getenv("CLOUD_HOST")
@@ -45,14 +46,11 @@ data:
                 temp = round(random.uniform(20.0, 30.0), 2)
                 # Correct ThingsBoard Gateway Format
                 payload = {
-                    "Cloud-Simulator-01": [
-                        {
-                            "values": {
-                                "temperature": temp,
-                                "status": "active"
-                            }
-                        }
-                    ]
+                    "device": "Cloud-Simulator-01",
+                    "metrics": "temperature",
+                    "value": temp,
+                    "units": "°C",
+                    "timestamp": datetime.utcnow().isoformat() + "Z"
                 }
                 client.publish(MQTT_TOPIC, json.dumps(payload), qos=1)
                 print(f"🚀 Sent to Cloud: {temp}°C")

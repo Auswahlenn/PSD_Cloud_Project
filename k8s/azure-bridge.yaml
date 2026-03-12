@@ -10,47 +10,100 @@ data:
     import os
     import json
     import time
+    import uuid
+    import traceback
+    from datetime import datetime, timezone
 
     CLOUD_HOST = os.getenv("CLOUD_HOST")
     CLOUD_USER = os.getenv("CLOUD_USER")
     CLOUD_PASS = os.getenv("CLOUD_PASS")
-    INTERNAL_HOST = "thingsboard-svc"
+    INTERNAL_HOST = os.getenv("INTERNAL_HOST", "thingsboard-svc")
+    BRIDGE_GATEWAY_TOKEN = os.getenv("BRIDGE_GATEWAY_TOKEN", "BhDbmIyXuWMR0ty9dqOD")
 
-    def on_connect(client, userdata, flags, rc):
-        if rc == 0:
-            print("✅ Connected to HiveMQ Cloud!")
-            client.subscribe("v1/gateway/telemetry")
-        else:
-            print(f"❌ Cloud Connection failed: {rc}")
+    def iso_to_epoch_ms(ts_str):
+      try:
+        if ts_str is None:
+          return int(time.time() * 1000)
+        # Handle trailing Z
+        if ts_str.endswith('Z'):
+          ts_str = ts_str.replace('Z', '+00:00')
+        dt = datetime.fromisoformat(ts_str)
+        if dt.tzinfo is None:
+          dt = dt.replace(tzinfo=timezone.utc)
+        return int(dt.timestamp() * 1000)
+      except Exception:
+        return int(time.time() * 1000)
 
-    def on_message(client, userdata, msg):
+    # Internal (ThingsBoard) client
+    internal_client = mqtt.Client(client_id=f"tb-internal-{uuid.uuid4().hex[:8]}")
+    internal_client.username_pw_set(BRIDGE_GATEWAY_TOKEN)
+
+    def ensure_internal_connected():
+      while True:
         try:
-            payload = json.loads(msg.payload.decode())
-            # payload is {"Cloud-Simulator-01": [{"values": {"temp": 25}}]}
-            for device_name, data_list in payload.items():
-                for entry in data_list:
-                    values = entry.get("values", entry) # Handle both nested and flat
-                    # Forward ONLY the values to make it flat in ThingsBoard
-                    print(f"🚀 Flattening & Forwarding for {device_name}: {values}")
-                    internal_client.publish(f"v1/gateway/telemetry", json.dumps({device_name: [ {"values": values} ]}))
+          internal_client.connect(INTERNAL_HOST, 1883, keepalive=60)
+          internal_client.loop_start()
+          print("✅ Connected to ThingsBoard (internal)")
+          return
         except Exception as e:
-            print(f"❌ Error: {e}")
+          print(f"⚠️ Internal connect failed: {e}. Retrying in 5s...")
+          time.sleep(5)
 
-    # Internal Client
-    internal_client = mqtt.Client()
-    internal_client.username_pw_set("BhDbmIyXuWMR0ty9dqOD") # Use the Bridge Gateway Token
-    internal_client.connect(INTERNAL_HOST, 1883)
-    internal_client.loop_start()
+    ensure_internal_connected()
 
-    # Cloud Client
-    cloud_client = mqtt.Client()
+    # Cloud (HiveMQ) client
+    cloud_client = mqtt.Client(client_id=f"bridge-cloud-{uuid.uuid4().hex[:8]}")
     cloud_client.username_pw_set(CLOUD_USER, CLOUD_PASS)
     cloud_client.tls_set(cert_reqs=ssl.CERT_REQUIRED)
+
+    def on_connect(client, userdata, flags, rc):
+      if rc == 0:
+        print("✅ Connected to HiveMQ Cloud!")
+        client.subscribe("v1/gateway/telemetry")
+      else:
+        print(f"❌ Cloud Connection failed: {rc}")
+
+    def on_message(client, userdata, msg):
+      try:
+        raw = msg.payload.decode()
+        payload = json.loads(raw)
+
+        # New simulator format: {"device":"Cloud-Simulator-01","metrics":"temperature","value":25.1,"units":"°C","timestamp":"..."}
+        if isinstance(payload, dict) and 'device' in payload and 'value' in payload:
+          device = payload.get('device')
+          metric = payload.get('metrics') or 'value'
+          value = payload.get('value')
+          ts = iso_to_epoch_ms(payload.get('timestamp'))
+          tb_payload = {device: [{"ts": ts, "values": {metric: value}}]}
+          print(f"🚀 Forwarding {device} -> {tb_payload}")
+          internal_client.publish("v1/gateway/telemetry", json.dumps(tb_payload), qos=1)
+          return
+
+        # Backwards-compatible: ThingsBoard gateway format
+        if isinstance(payload, dict):
+          # payload is {device: [ {"values": {...}} ] }
+          print(f"🚀 Forwarding legacy format: {payload}")
+          internal_client.publish("v1/gateway/telemetry", json.dumps(payload), qos=1)
+          return
+
+        print(f"⚠️ Unrecognized payload format: {raw}")
+
+      except Exception as e:
+        print(f"❌ Error processing message: {e}")
+        traceback.print_exc()
+
     cloud_client.on_connect = on_connect
     cloud_client.on_message = on_message
 
-    cloud_client.connect(CLOUD_HOST, 8883)
-    cloud_client.loop_forever()
+    # Connect loop with retry
+    while True:
+      try:
+        print(f"Connecting to {CLOUD_HOST}:8883 ...")
+        cloud_client.connect(CLOUD_HOST, 8883, keepalive=60)
+        cloud_client.loop_forever()
+      except Exception as e:
+        print(f"⚠️ Cloud connection error: {e}. Retrying in 5s...")
+        time.sleep(5)
 ---
 apiVersion: apps/v1
 kind: Deployment
