@@ -54,3 +54,15 @@ resource "google_artifact_registry_repository" "mqtt_broker" {
     repository_id = var.artifact_registry_repository
     format       = "DOCKER"
 }
+
+resource "google_service_account" "vm_service_account" {
+    provider    = google
+    account_id   = "vm-service-account"
+    display_name = "VM Service Account"
+}
+
+resource "google_project_iam_member" "vm_service_account_role" {
+    project = var.project
+    role    = "roles/artifactregistry.reader"
+    member  = "serviceAccount:${google_service_account.vm_service_account.email}"
+}
