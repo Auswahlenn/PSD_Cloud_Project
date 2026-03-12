@@ -40,12 +40,17 @@ resource "google_compute_firewall" "ssh" {
         protocol = "tcp"
         ports    = ["22"]
     }
-    
+
     source_ranges = ["0.0.0.0/23"]
 }
 
 
-
 resource "google_compute_network" "vpc_network" {
     name = "vpc-network"
+}
+
+resource "google_artifact_registry_repository" "mqtt_broker" {
+    location     = var.artifact_registry_location
+    repository_id = var.artifact_registry_repository
+    format       = "DOCKER"
 }
