@@ -19,3 +19,18 @@ variable artifact_registry_repository {
 variable pubsub_topic {
     default = "mqtt-broker-topic"
 }
+
+variable mqtt_container_image {
+    type    = string
+    default = ""
+}
+
+variable allowed_mqtt_cidrs {
+    type    = list(string)
+    default = ["0.0.0.0/0"]
+}
+
+variable allowed_ssh_cidrs {
+    type    = list(string)
+    default = ["0.0.0.0/0"]
+}

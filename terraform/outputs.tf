@@ -1,9 +1,13 @@
 output "internal_ip" {
-  value = google_compute_instance.vm_instance.network_interface[0].network_ip
+  value = module.mqtt_broker.internal_ip
 }
 
 output "external_ip" {
-  value = google_compute_instance.vm_instance.network_interface[0].access_config[0].nat_ip
+  value = module.mqtt_broker.external_ip
+}
+
+output "mqtt_broker_endpoint" {
+  value = "${module.mqtt_broker.external_ip}:1883"
 }
 
 output "repository_url" {
