@@ -1,7 +1,10 @@
-resource "google_project_iam_binding" "artifact_registry_reader" {
+resource "google_service_account" "vm_service_account" {
+    account_id   = "vm-service-account"
+    display_name = "VM Service Account"
+}
+
+resource "google_project_iam_member" "artifact_registry_reader" {
     project = var.project
     role    = "roles/artifactregistry.reader"
-    members = [
-        "serviceAccount:${google_service_account.vm_service_account.email}"
-    ]
+    member  = "serviceAccount:${google_service_account.vm_service_account.email}"
 }

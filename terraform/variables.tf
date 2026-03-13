@@ -15,3 +15,7 @@ variable artifact_registry_location {
 variable artifact_registry_repository {
     default = "mqtt-broker"
 }
+
+variable pubsub_topic {
+    default = "mqtt-broker-topic"
+}
