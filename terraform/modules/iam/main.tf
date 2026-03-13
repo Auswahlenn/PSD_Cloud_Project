@@ -8,3 +8,13 @@ resource "google_project_iam_member" "artifact_registry_reader" {
     role    = "roles/artifactregistry.reader"
     member  = "serviceAccount:${google_service_account.vm_service_account.email}"
 }
+
+resource "google_project_iam_member" "dataflow_worker" {
+    project = var.project
+    role    = "roles/dataflow.worker"
+    member  = "serviceAccount:${data.google_project.project.number}-compute@developer.gserviceaccount.com"
+}
+
+data "google_project" "project" {
+    project_id = var.project
+}

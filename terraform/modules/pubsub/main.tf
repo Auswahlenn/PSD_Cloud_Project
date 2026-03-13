@@ -6,15 +6,10 @@ resource "google_pubsub_topic" "topics" {
         }
 }
 
-resource "google_service_account" "hivemq_pubsub_bridge" {
-    account_id   = "hivemq-pubsub-bridge"
-    display_name = "HiveMQ Pub/Sub Bridge"
-}
-
-resource "google_pubsub_topic_iam_member" "hivemq_publisher" {
+resource "google_pubsub_topic_iam_member" "mqtt_publisher" {
     topic  = google_pubsub_topic.topics.name
     role   = "roles/pubsub.publisher"
-    member = "serviceAccount:${google_service_account.hivemq_pubsub_bridge.email}"
+    member = "serviceAccount:${var.publisher_service_account_email}"
 }
 
 resource "google_pubsub_subscription" "topics_subscription" {

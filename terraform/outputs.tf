@@ -18,6 +18,6 @@ output "pubsub_topic" {
   value = module.pubsub.topic_name
 }
 
-output "hivemq_bridge_service_account_email" {
-  value = module.pubsub.bridge_service_account_email
+output "pubsub_subscription" {
+  value = module.pubsub.subscription_name
 }

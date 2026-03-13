@@ -14,7 +14,7 @@ provider "google" {
 }
 
 locals {
-    default_mqtt_container_image = "${google_artifact_registry_repository.mqtt_broker.location}-docker.pkg.dev/${var.project}/${google_artifact_registry_repository.mqtt_broker.repository_id}/mqtt-broker:latest"
+    default_mqtt_container_image = "${google_artifact_registry_repository.mqtt_broker.location}-docker.pkg.dev/${var.project}/${google_artifact_registry_repository.mqtt_broker.repository_id}/mqtt_broker:latest"
     mqtt_container_image         = var.mqtt_container_image != "" ? var.mqtt_container_image : local.default_mqtt_container_image
 }
 
@@ -52,5 +52,6 @@ module "mqtt_broker" {
 module "pubsub" {
     source  = "./modules/pubsub"
 
-    project = var.project
+    project                       = var.project
+    publisher_service_account_email = module.iam_binding.service_account_email
 }
