@@ -15,6 +15,12 @@ resource "google_project_iam_member" "dataflow_worker" {
     member  = "serviceAccount:${data.google_project.project.number}-compute@developer.gserviceaccount.com"
 }
 
+resource "google_project_iam_member" "dataflow_pubsub_publisher" {
+    project = var.project
+    role    = "roles/pubsub.publisher"
+    member  = "serviceAccount:${data.google_project.project.number}-compute@developer.gserviceaccount.com"
+}
+
 data "google_project" "project" {
     project_id = var.project
 }
