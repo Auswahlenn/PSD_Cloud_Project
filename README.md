@@ -27,3 +27,22 @@ docker exec -it 18a220b72552 mosquitto_sub -h localhost -t mqtt-broker-topic
 gcloud dataflow jobs list --region=us-central1 --project=project-4a8f3b06-8ff8-4efd-a4d --limit=5
 
 gcloud dataflow jobs cancel <ID> --region=us-central1 --project=project-4a8f3b06-8ff8-4efd-a4d
+
+gcloud pubsub subscriptions pull mqtt-broker-subscription --project=project-4a8f3b06-8ff8-4efd-a4d --auto-ack --limit=10
+
+
+CPNG postgres operator 
+
+helm version 2>&1 for prometheus
+helm install kube-prometheus prometheus-community/kube-prometheus-stack \
+  --namespace monitoring \
+  --set grafana.enabled=false \
+  --set prometheus.prometheusSpec.resources.requests.cpu=100m \
+  --set prometheus.prometheusSpec.resources.requests.memory=256Mi \
+  --set prometheus.prometheusSpec.resources.limits.cpu=500m \
+  --set prometheus.prometheusSpec.resources.limits.memory=512Mi \
+  --set prometheus.prometheusSpec.retention=3d \
+  --set alertmanager.enabled=false \
+  --set nodeExporter.enabled=true \
+  --set kubeStateMetrics.enabled=true \
+  2>&1

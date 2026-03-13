@@ -1,0 +1,46 @@
+syntax = "proto3";
+
+package temperature;
+
+option go_package = "github.com/pangjiade/GCP-ESP/timescaledb/pb";
+
+import "google/protobuf/timestamp.proto";
+
+service TemperatureService {
+    rpc RecordTemperature (TemperatureRequest) returns (TemperatureResponse);
+    rpc GetTemperatures (GetTemperaturesRequest) returns (GetTemperaturesResponse);
+    rpc GetLatestTemperature (GetLatestRequest) returns (TemperatureReading);
+}
+
+message TemperatureRequest {
+    string device = 1;
+    double value = 2;
+    string unit = 3;
+    google.protobuf.Timestamp timestamp = 4;
+}
+
+message TemperatureResponse {
+    bool success = 1;
+}
+
+message GetTemperaturesRequest {
+    string device = 1;
+    google.protobuf.Timestamp start = 2;
+    google.protobuf.Timestamp end = 3;
+    int32 limit = 4;
+}
+
+message GetTemperaturesResponse {
+    repeated TemperatureReading readings = 1;
+}
+
+message GetLatestRequest {
+    string device = 1;
+}
+
+message TemperatureReading {
+    string device = 1;
+    double value = 2;
+    string unit = 3;
+    google.protobuf.Timestamp timestamp = 4;
+}

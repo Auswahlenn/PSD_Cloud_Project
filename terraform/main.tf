@@ -77,3 +77,12 @@ module "dataflow" {
     mqtt_username = "guest"
     mqtt_password = "guest"
 }
+
+module "gke" {
+    source = "./modules/gke"
+
+    project               = var.project
+    region                = var.region
+    zone                  = var.zone
+    service_account_email = module.iam_binding.service_account_email
+}

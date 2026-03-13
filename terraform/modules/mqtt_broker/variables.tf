@@ -13,7 +13,7 @@ variable "instance_name" {
 
 variable "machine_type" {
   type    = string
-  default = "e2-small"
+  default = "e2-medium"
 }
 
 variable "network_name" {

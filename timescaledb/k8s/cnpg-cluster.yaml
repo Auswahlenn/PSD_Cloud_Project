@@ -1,0 +1,32 @@
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: timescaledb-operator
+  namespace: iot
+spec:
+  instances: 2
+  imageName: ghcr.io/cloudnative-pg/postgresql:16
+
+  bootstrap:
+    initdb:
+      database: temperatures
+      owner: postgres
+      secret:
+        name: timescaledb-secret
+
+  superuserSecret:
+    name: cnpg-superuser-secret
+
+  storage:
+    size: 10Gi
+
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: "1"
+      memory: 512Mi
+
+  monitoring:
+    enablePodMonitor: false
