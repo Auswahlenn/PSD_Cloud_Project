@@ -4,10 +4,20 @@ terraform{
             source  = "hashicorp/google"
             version = "7.23.0"
         }
+        google-beta = {
+            source  = "hashicorp/google-beta"
+            version = "7.23.0"
+        }
     }
 }
 
 provider "google" {
+  project = var.project
+  region  = var.region
+  zone    = var.zone
+}
+
+provider "google-beta" {
   project = var.project
   region  = var.region
   zone    = var.zone
@@ -54,4 +64,16 @@ module "pubsub" {
 
     project                       = var.project
     publisher_service_account_email = module.iam_binding.service_account_email
+}
+
+module "dataflow" {
+    source = "./modules/dataflow"
+
+    project       = var.project
+    region        = var.region
+    broker_server = "tcp://${module.mqtt_broker.external_ip}:1883"
+    mqtt_topic    = var.pubsub_topic
+    pubsub_topic  = "projects/${var.project}/topics/${module.pubsub.topic_name}"
+    mqtt_username = "guest"
+    mqtt_password = "guest"
 }

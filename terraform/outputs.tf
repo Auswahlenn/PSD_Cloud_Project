@@ -21,3 +21,7 @@ output "pubsub_topic" {
 output "pubsub_subscription" {
   value = module.pubsub.subscription_name
 }
+
+output "dataflow_job_id" {
+  value = module.dataflow.job_id
+}
