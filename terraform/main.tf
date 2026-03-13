@@ -66,3 +66,10 @@ resource "google_project_iam_member" "vm_service_account_role" {
     role    = "roles/artifactregistry.reader"
     member  = "serviceAccount:${google_service_account.vm_service_account.email}"
 }
+
+module "iam_binding" {
+    source  = "./modules/iam"
+
+    project = var.project
+
+}
