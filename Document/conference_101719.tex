@@ -91,6 +91,13 @@ To address the aforementioned market needs, our solution introduces a fully deco
 \label{fig:seq1}
 \end{figure}
 
+\subsection{Sequence Flow Explanation}
+Figure~\ref{fig:seq1} presents the runtime interaction sequence across the full pipeline. In the normal path, edge sensors publish telemetry through MQTT to the Mosquitto broker, Cloud Dataflow continuously consumes and transforms this stream, and processed events are forwarded into Pub/Sub. The gRPC service on GKE then consumes subscription messages, validates the payload, and persists records into PostgreSQL managed by CloudNativePG. Grafana periodically queries this database to visualize near real-time time-series metrics.
+
+Each component has a focused responsibility to preserve modularity and operational clarity. MQTT provides lightweight edge ingestion, Dataflow handles streaming transformation, Pub/Sub decouples producers from consumers through asynchronous buffering, gRPC encapsulates domain processing logic, and PostgreSQL provides durable storage for analytics and dashboard queries.
+
+During traffic spikes, reliability is maintained through elastic scaling and queue-based decoupling. Pub/Sub absorbs burst pressure, Dataflow adjusts workers within configured limits, and Kubernetes HPA scales gRPC replicas based on CPU utilization. If processing temporarily falls behind, messages remain durable in Pub/Sub and are consumed once capacity recovers, preserving at-least-once delivery semantics across the system.
+
 \subsection{Cloud-Native Principles}
 From the old system architecture overview (Fig.~\ref{fig:arch1}), we observe that the previous iteration was a monolithic architecture suffering from single points of failure, lacking both scalability and resilience. To address these critical limitations, we designed a modernized cloud-native microservices architecture (Fig.~\ref{fig:arch2}). This new decoupled system leverages several core cloud-native principles to achieve high availability and scalability.
 

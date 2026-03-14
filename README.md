@@ -239,3 +239,26 @@ terraform destroy
 ```
 
 > **Note:** Terraform destroys all infrastructure including the Dataflow job. If you want to avoid Dataflow being recreated on next `terraform apply`, stop it manually in the GCP console first.
+
+# 1) Stop Dataflow
+gcloud dataflow jobs list --region=us-central1 --status=active
+gcloud dataflow jobs cancel <JOB_ID> --region=us-central1
+
+# 2) Scale app workloads down
+kubectl -n iot scale deployment grpc-server --replicas=0
+kubectl -n iot scale deployment grafana --replicas=0
+
+# Optional: if installed
+kubectl -n monitoring scale deployment kube-prometheus-operator --replicas=0 || true
+
+# 3) Optional: remove Grafana external LB (saves more)
+kubectl -n iot delete svc grafana
+
+# Recreate Grafana service if deleted
+kubectl apply -f timescaledb/k8s/grafana.yaml
+
+# Scale apps back up
+kubectl -n iot scale deployment grpc-server --replicas=2
+kubectl -n iot scale deployment grafana --replicas=1
+
+# Restart Dataflow if needed (via Terraform apply or gcloud/template run)
