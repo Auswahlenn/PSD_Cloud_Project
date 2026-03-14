@@ -84,20 +84,37 @@ To address the aforementioned market needs, our solution introduces a fully deco
 
 \subsection{Architecture Overview}
 % Describe the high-level system evolution and cloud infrastructure.
+\begin{figure}[htbp]
+\centerline{\includegraphics[width=\linewidth]{diagram1.png}}
+\caption{Old System Architecture Overview (Edge, Gateway, and Local Deployment).}
+\label{fig:arch1}
+\end{figure}
 
+\begin{figure}[htbp]
+\centerline{\includegraphics[width=\linewidth]{diagram2.png}}
+\caption{System Architecture Overview (Cloud-Native Data Flow and Management).}
+\label{fig:arch2}
+\end{figure}
 \subsection{Cloud-Native Principles}
-% Discuss how your design achieves scalability, resilience, and optimization for cloud environments.
+From the old system architecture overview (Fig.~\ref{fig:arch1}), we observe that the previous iteration was a monolithic architecture suffering from single points of failure, lacking both scalability and resilience. To address these critical limitations, we designed a modernized cloud-native microservices architecture (Fig.~\ref{fig:arch2}). This new decoupled system leverages several core cloud-native principles to achieve high availability and scalability.
 
+Our implementation is inherently \textbf{Event-Driven} and relies on \textbf{Asynchronous Messaging}. By utilizing Google Cloud Pub/Sub, we buffer telemetry data during traffic spikes, ensuring at-least-once delivery. Furthermore, we designed a \textbf{Streaming Data Pipeline} using Cloud Dataflow for real-time processing. System resilience is guaranteed through \textbf{High Availability (HA)}; the CloudNativePG operator maintains automatic failovers for the PostgreSQL cluster. Concurrently, Kubernetes \textbf{Horizontal Pod Autoscaling (HPA)} dynamically adjusts our application replicas based on CPU utilization, ensuring the system remains optimized for varying IoT workloads.
 \subsection{Component Rationale}
-% Clearly justify why you chose specific cloud components, services, or deployment strategies (e.g., Kubernetes, serverless, microservices).
+The selection of cloud infrastructure was driven by the necessity for a managed, scalable ecosystem. 
+\begin{itemize}
+    \item \textbf{Google Kubernetes Engine (GKE)}: Serves as the orchestration layer for the gRPC server, database, and observability stack. GKE abstracts control plane maintenance while providing native integration with Google Cloud IAM.
+    \item \textbf{Cloud Dataflow \& Pub/Sub}: Dataflow provides a serverless Apache Beam runner to seamlessly stream data from the legacy MQTT broker, while Pub/Sub acts as a resilient buffer separating edge ingestion from internal application logic.
+    \item \textbf{Compute Engine}: Hosts the Mosquitto MQTT broker on a Container-Optimized OS, acting as the critical entryway for lightweight IoT components (e.g., Jetson Nano, LoRaWAN gateways) to interface with the cloud.
+\end{itemize}
 
 \section{Technical Implementation \& Competency}
 \subsection{Core Technologies}
-% Discuss the programming concepts, AI integration (if doing Option B), and frameworks used.
+Our architecture is fully codified and deployed using \textbf{Terraform} (Infrastructure as Code), which maintains the lifecycle of all GCP resources identically across environments. All workloads are containerized via multi-stage Docker builds to minimize attack surfaces and deployed using Kubernetes primitives (Deployments, Services, Secrets). Internal communications are facilitated through \textbf{gRPC} and \textbf{Protocol Buffers (protobuf)}, which offer a highly efficient and strongly-typed binary protocol over traditional REST. Finally, real-time observability is achieved using \textbf{Prometheus} (infrastructure metrics) and \textbf{Grafana} (unified visualization).
 
 \subsection{Implementation Details}
-% Show evidence of an efficient and effective implementation with minimal errors. You can include very brief code snippets or technical workflows (like CI/CD pipelines).
+The system's implementation strictly adheres to professional cloud-native practices, particularly concerning security and performance. Security is enforced via the principle of least privilege, assigning explicit IAM roles (e.g., \texttt{dataflow.worker}, \texttt{pubsub.publisher}) to distinct service accounts. Sensitive configurations, such as database credentials, are managed dynamically via Kubernetes Secrets rather than hardcoded variables.
 
+Operationally, the central gRPC consumer is configured via an HPA policy to scale from 2 to 10 pod replicas depending on an active 60\% CPU utilization threshold. Additionally, the CloudNativePG operator manages a primary and replica streaming PostgreSQL database configuration. This provides near-instant continuous failover capabilities and read/write splitting, ensuring zero downtime even during unexpected node failures.
 \subsection{Software Life Cycle \& Agile}
 % Briefly touch upon how you managed the software development lifecycle professionally.
 
