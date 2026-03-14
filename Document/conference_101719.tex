@@ -74,7 +74,7 @@ To address the aforementioned market needs, our solution introduces a fully deco
 \subsection{Architecture Overview}
 % Describe the high-level system evolution and cloud infrastructure.
 \begin{figure}[htbp]
-\centerline{\includegraphics[width=\linewidth]{diagram1.png}}
+\centerline{\includegraphics[width=\linewidth]{oldArchitecture.png}}
 \caption{Old Monolithic Architecture Overview (Edge, Gateway, and Local Deployment).}
 \label{fig:arch1}
 \end{figure}
@@ -84,11 +84,13 @@ To address the aforementioned market needs, our solution introduces a fully deco
 \caption{New Cloud-Native Microservices Architecture Overview.}
 \label{fig:arch2}
 \end{figure}
+
 \begin{figure}[htbp]
 \centerline{\includegraphics[width=\linewidth]{CloudNativeSequenceDiagram.png}}
 \caption{Cloud-Native End-to-End Sequence Flow.}
 \label{fig:seq1}
 \end{figure}
+
 \subsection{Cloud-Native Principles}
 From the old system architecture overview (Fig.~\ref{fig:arch1}), we observe that the previous iteration was a monolithic architecture suffering from single points of failure, lacking both scalability and resilience. To address these critical limitations, we designed a modernized cloud-native microservices architecture (Fig.~\ref{fig:arch2}). This new decoupled system leverages several core cloud-native principles to achieve high availability and scalability.
 
