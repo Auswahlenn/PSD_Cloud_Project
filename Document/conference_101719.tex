@@ -45,9 +45,8 @@ Singapore \\
 \maketitle
 
 \begin{abstract}
-This document is a model and instructions for \LaTeX.
-This and the IEEEtran.cls file define the components of your paper [title, text, heads, etc.]. *CRITICAL: Do Not Use Symbols, Special Characters, Footnotes, 
-or Math in Paper Title or Abstract.
+This paper presents the design and implementation of an end-to-end, cloud-native Internet of Things (IoT) data distribution system deployed on Google Cloud Platform (GCP). The architecture leverages microservices and event-driven patterns to ensure high availability, scalability, and secure data processing. Simulated IoT sensor data is ingested via an MQTT broker hosted on a Compute Engine instance, subsequently streamed through Cloud Dataflow, and buffered using Cloud Pub/Sub. A horizontally scaled gRPC server, orchestrated within Google Kubernetes Engine (GKE), consumes these messages and persists them into a highly available PostgreSQL database managed by the CloudNativePG operator. Real-time observability and monitoring are achieved using Grafana and Prometheus. Infrastructure as Code (IaC) principles are applied using Terraform for reproducible deployments. The resulting system demonstrates a robust, automated pipeline capable of handling variable IoT workloads while bridging lightweight edge protocols with scalable cloud-native technologies.
+
 \end{abstract}
 
 \begin{IEEEkeywords}
