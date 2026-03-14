@@ -120,13 +120,23 @@ The system's implementation strictly adheres to professional cloud-native practi
 Operationally, the central gRPC consumer is configured via an HPA policy to scale from 2 to 10 pod replicas depending on an active 60\% CPU utilization threshold. Additionally, the CloudNativePG operator manages a primary and replica streaming PostgreSQL database configuration. This provides near-instant continuous failover capabilities and read/write splitting, ensuring zero downtime even during unexpected node failures.
 \subsection{Software Life Cycle \& Agile}
 % Briefly touch upon how you managed the software development lifecycle professionally.
+Our team followed an iterative Agile workflow with short development cycles for infrastructure, backend services, and observability features. Work items were split into small, testable increments (for example, provisioning infrastructure, validating the streaming path, and integrating dashboards), enabling frequent review and early issue detection.
 
+Terraform-based Infrastructure as Code (IaC) was central to the software life cycle. Environment configuration was parameterized through variables, which improved reproducibility and allowed multiple developers to deploy consistent stacks without manual drift. This approach also strengthened testing: each change could be validated in a controlled environment, adjusted quickly, and redeployed with minimal operational overhead.
 \section{Results, Testing \& Evaluation}
 % Demonstrate that your architecture functions with continuity.
 % Discuss performance testing, cloud scalability validation, or how the technical solution practically performs.
+The deployed platform was validated through functional and operational checks across each pipeline stage. End-to-end continuity was confirmed by publishing simulated MQTT telemetry, observing successful forwarding through Dataflow and Pub/Sub, and verifying that gRPC consumers persisted records into PostgreSQL. Dashboard validation in Grafana confirmed correct time-series rendering and query behavior over live database updates.
+
+Scalability behavior was evaluated under increased publish frequency and sensor concurrency. During higher input rates, Pub/Sub provided effective buffering while GKE Horizontal Pod Autoscaling increased consumer replicas according to CPU pressure, subject to available node capacity. Dataflow streaming workers handled sustained ingestion and transformation, while system observability through Prometheus and Grafana enabled rapid detection of bottlenecks such as pending pods caused by temporary CPU constraints.
+
+From a reliability perspective, the architecture maintained service continuity through decoupling and managed failover components. CloudNativePG provided resilient database operation with primary-replica topology, and asynchronous messaging prevented transient producer-consumer imbalance from causing data loss. Overall, the test outcomes demonstrate that the proposed cloud-native design is suitable for variable IoT workloads and can be iteratively optimized for production-grade throughput.
 
 \section{Conclusion}
 % Summarize the impact of your cloud-native architecture, how it achieved the intended learning outcomes, and potential future improvements.
+This project demonstrates how a cloud-native redesign can transform a single-node IoT prototype into a scalable, resilient, and observable distributed platform on GCP. By integrating MQTT ingestion, Dataflow streaming, Pub/Sub decoupling, autoscaled gRPC processing, and highly available PostgreSQL, the system addresses core limitations of monolithic deployment models and supports real-time analytics through Grafana.
+
+The implementation also reinforces key professional competencies: Infrastructure as Code for reproducible environments, container orchestration for elastic service management, and metrics-driven operations for reliability engineering. Future improvements include workload-aware autoscaling tuning, stronger security hardening for production deployment, and cost optimization through environment sleep-mode automation and policy-based resource scheduling.
 
 \section*{References \& AI Citations}
 % CRITICAL PLAGIARISM RULE: The specification strictly requires that "If any materials in the submission are created by generative artificial intelligence, student must clearly cite them in the report and submitted materials." Make sure to include citations here if you use AI tools for code or text generation.
