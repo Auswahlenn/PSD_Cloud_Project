@@ -9,6 +9,10 @@ terraform{
             version = "7.23.0"
         }
     }
+    backend "gcs" {
+        bucket  = "terraform-state-bucket-4a8f3b06-8ff8-4efd-a4d"
+        prefix  = "terraform/state"
+    }
 }
 
 provider "google" {
@@ -70,7 +74,7 @@ module "dataflow" {
     source = "./modules/dataflow"
 
     project       = var.project
-    region        = var.region
+    region        = var.dataflow_region
     broker_server = "tcp://${module.mqtt_broker.external_ip}:1883"
     mqtt_topic    = var.pubsub_topic
     pubsub_topic  = "projects/${var.project}/topics/${module.pubsub.topic_name}"

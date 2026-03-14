@@ -20,6 +20,11 @@ variable pubsub_topic {
     default = "mqtt-broker-topic"
 }
 
+variable dataflow_region {
+    description = "Region for Dataflow jobs (us-central1 has capacity issues on free tier)"
+    default     = "us-west1"
+}
+
 variable mqtt_container_image {
     type    = string
     default = ""

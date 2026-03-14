@@ -24,3 +24,18 @@ variable "mqtt_password" {
     default   = "guest"
     sensitive = true
 }
+
+variable "worker_machine_type" {
+    description = "Dataflow worker machine type"
+    default     = "e2-small"
+}
+
+variable "num_workers" {
+    description = "Initial number of Dataflow workers"
+    default     = 1
+}
+
+variable "max_num_workers" {
+    description = "Maximum number of Dataflow workers"
+    default     = 2
+}
