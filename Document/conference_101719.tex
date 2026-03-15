@@ -33,13 +33,13 @@ Singapore \\
 \IEEEauthorblockA{\textit{Singapore Institute of Techonology} \\
 \textit{University of Glasgow}\\
 Singapore \\
-2400634@sit.singaporetech.edu.sg \\ 3070@student.gla.ac.uk}
+2400634@sit.singaporetech.edu.sg \\ 3070591G@student.gla.ac.uk}
 \and
 \IEEEauthorblockN{4\textsuperscript{th} Tan Yale}
 \IEEEauthorblockA{\textit{Singapore Institute of Technology} \\
 \textit{University of Glasgow}\\
 Singapore \\
-2401316@sit.singaporetech.edu.sg \\ 3070@student.gla.ac.uk}
+2401316@sit.singaporetech.edu.sg \\ 3070645T@student.gla.ac.uk}
 }
 \maketitle
 
@@ -57,17 +57,30 @@ component, formatting, style, styling, insert
 \subsection{Context \& Problem Statement}
 % Introduce the problem you are solving (e.g., Net-Zero, Circular Economy, or your Team Project domain).
 Referencing from our base product project, we have extended the system to be deployed on Google Cloud Platform (GCP) to provide a more robust, scalable, and secure solution for IoT data distribution. The goal is to demonstrate the capabilities of cloud-native technologies in handling IoT data streams and providing a reliable platform for data processing and analysis. The old system, deployed on a single machine acting as a server, database, and dashboard, suffered from single points of failure, lack of scalability, and poor reliability. By transitioning to a cloud-native microservices architecture on GCP, we solve these critical bottlenecks and ensure the system can dynamically scale to meet fluctuating IoT workloads.
+
+Traditional IoT deployments often begin as monolithic prototypes where all services are tightly coupled on a single machine. While such designs are convenient during early experimentation, they quickly become inadequate when exposed to real-world workloads. As the number of connected devices grows, the system must handle increasing message throughput, storage requirements, and concurrent requests. Without proper architectural separation, resource contention occurs, resulting in degraded performance and potential service outages.
+
+Furthermore, centralized architectures make maintenance and upgrades difficult. Any change to a single component often requires redeploying the entire system, increasing downtime and operational risk. In contrast, a microservices-based architecture allows each component to be deployed, updated, and scaled independently. This architectural transition forms the foundation of modern cloud-native systems and enables organizations to maintain reliability even as data ingestion rates grow significantly.
+
 \subsection{Market Needs \& Research}
 % Validate the user demands and market trends.
 
 The proliferation of IoT devices, projected to reach 18.8 billion by the end of 2024 \cite{iot_market_2024}, is driving an unprecedented volume of data generation. This data deluge poses significant challenges to traditional, centralized data processing architectures, resulting in latency issues, bandwidth bottlenecks, and single points of failure. The contemporary market demands highly scalable, resilient, and real-time data distribution systems capable of handling mission-critical workloads, such as industrial automation and smart city infrastructure. Prior IEEE work on engineering IoT cloud systems similarly emphasizes elasticity, service decomposition, and operational resilience as core design requirements \cite{truong2015iotcloud}. Organizations are increasingly adopting cloud-native strategies to mitigate operational overhead and manage the inherent complexity of scaling IoT deployments while ensuring robust data security and high availability \cite{cloud_native_iot_trends}.
+
+
 
 \subsection{Product Innovation}
 % Highlight the innovative features of your solution and how they effectively address the market needs.
 
 To address the aforementioned market needs, our solution introduces a fully decoupled, cloud-native architecture on GCP. Innovation is driven through three key pillars: (1) 	\textbf{Event-Driven Scalability}, utilizing Cloud Pub/Sub and GKE to automatically scale the ingestion and processing layers based on real-time traffic volume; (2) 	\textbf{Resilient State Management}, leveraging CloudNativePG to provide a highly available PostgreSQL cluster capable of managing continuous, high-throughput IoT streams without downtime; and (3) 	\textbf{Automated Infrastructure Management}, using Terraform to codify the environment, reducing configuration drift and enabling rapid, reproducible deployments across different environments or cloud regions.
 
-\newpage\section{Cloud Native Design \& Architecture}
+Beyond these three pillars, the architecture also emphasizes modular system evolution and long-term operational sustainability. In cloud-native systems, loosely coupled services allow individual components to evolve independently without introducing system-wide disruptions. This enables incremental feature development and simplifies maintenance when deploying updates or introducing new IoT data sources.
+
+Another important innovation is the system's ability to integrate heterogeneous edge devices. IoT ecosystems typically consist of diverse hardware platforms such as embedded sensors, microcontrollers, and gateway devices. By standardizing the ingestion interface through MQTT, the system supports flexible device integration while maintaining minimal communication overhead. MQTT has been widely adopted in industrial IoT systems due to its lightweight publish–subscribe model and suitability for constrained network environments \cite{naik2017protocols}.
+
+Furthermore, the architecture is designed with future extensibility in mind. Additional analytics components, such as machine learning inference services or anomaly detection modules, can be integrated into the data pipeline without disrupting the existing system. Because data flows through asynchronous messaging queues, downstream analytics services can subscribe to the same event stream and process data independently. This architectural flexibility is a key advantage of event-driven cloud-native systems \cite{gannon2017cloudnative}.
+
+\section{Cloud Native Design \& Architecture}
 % This should be a major section of your report with high-quality Mermaid/architecture diagrams.
 
 
@@ -90,7 +103,11 @@ To address the aforementioned market needs, our solution introduces a fully deco
 \caption{Cloud-Native End-to-End Sequence Flow.}
 \label{fig:seq1}
 \end{figure}
+The transition from a monolithic architecture to a distributed cloud-native design also improves system fault tolerance. In the original system architecture (Fig.~\ref{fig:arch1}), a failure in the single host machine would cause the entire system—including ingestion, processing, storage, and visualization layers—to become unavailable. By distributing services across multiple cloud-managed components, failures can now be isolated and recovered automatically.
 
+For example, Kubernetes automatically restarts failed containers and reschedules workloads onto healthy nodes. Similarly, managed messaging systems such as Google Cloud Pub/Sub provide persistent message storage, ensuring that telemetry data is not lost even when processing services temporarily fail. This fault-tolerant design significantly improves system reliability when operating at scale.
+
+In addition, the architecture supports horizontal scalability. As the number of IoT devices increases, new processing replicas can be deployed dynamically without modifying the core system architecture. Cloud-native orchestration platforms such as Kubernetes enable this form of elastic scaling, allowing services to expand or contract depending on workload demands \cite{kubernetes2018}.
 \subsection{Sequence Flow Explanation}
 Figure~\ref{fig:seq1} presents the runtime interaction sequence across the full pipeline. In the normal path, edge sensors publish telemetry through MQTT to the Mosquitto broker, Cloud Dataflow continuously consumes and transforms this stream, and processed events are forwarded into Pub/Sub. The gRPC service on GKE then consumes subscription messages, validates the payload, and persists records into PostgreSQL managed by CloudNativePG. Grafana periodically queries this database to visualize near real-time time-series metrics.
 
@@ -114,8 +131,20 @@ The selection of cloud infrastructure was driven by the necessity for a managed,
 \subsection{Core Technologies}
 Our architecture is fully codified and deployed using \textbf{Terraform} (Infrastructure as Code), which maintains the lifecycle of all GCP resources identically across environments. All workloads are containerized via multi-stage Docker builds to minimize attack surfaces and deployed using Kubernetes primitives (Deployments, Services, Secrets). Internal communications are facilitated through \textbf{gRPC} and \textbf{Protocol Buffers (protobuf)}, which offer a highly efficient and strongly-typed binary protocol over traditional REST. Finally, real-time observability is achieved using \textbf{Prometheus} (infrastructure metrics) and \textbf{Grafana} (unified visualization).
 
+Another critical component of the implementation is the use of streaming data processing frameworks. Google Cloud Dataflow, built on Apache Beam, provides a unified programming model for both batch and stream processing workloads. Apache Beam pipelines allow developers to define complex data transformations while abstracting the underlying execution environment. This enables scalable parallel processing of high-volume telemetry streams without requiring manual resource management.
+
+Streaming data pipelines are particularly important in IoT systems because sensor telemetry is generated continuously. Instead of processing data in discrete batches, stream processing frameworks allow systems to analyze events in real time. This enables faster detection of anomalies, improved responsiveness for monitoring systems, and more accurate real-time analytics.
+
+In addition, containerization provides strong isolation between services. Each application component runs inside its own container environment with well-defined dependencies. This reduces compatibility issues between development and production environments and simplifies continuous integration and deployment workflows.
+
 \subsection{Implementation Details}
 The system's implementation strictly adheres to professional cloud-native practices, particularly concerning security and performance. Security is enforced via the principle of least privilege, assigning explicit IAM roles (e.g., \texttt{dataflow.worker}, \texttt{pubsub.publisher}) to distinct service accounts. Sensitive configurations, such as database credentials, are managed dynamically via Kubernetes Secrets rather than hardcoded variables.
+
+Observability plays a crucial role in maintaining the reliability of distributed systems. In complex microservice architectures, failures may occur across multiple layers of the system, making debugging significantly more difficult than in monolithic deployments. To address this challenge, the platform integrates a comprehensive monitoring stack using Prometheus and Grafana.
+
+Prometheus collects time-series metrics from Kubernetes nodes, application containers, and system services \cite{prometheus2018}. These metrics include CPU utilization, memory consumption, request latency, and network throughput. The collected metrics are then visualized through Grafana dashboards, providing operators with real-time insights into system performance and operational health.
+
+This observability infrastructure enables proactive system management. By monitoring performance trends, operators can identify bottlenecks before they cause service degradation. Alerting rules can also be configured to automatically notify administrators when abnormal conditions occur, such as excessive CPU utilization or failed service instances.
 
 Operationally, the central gRPC consumer is configured via an HPA policy to scale from 2 to 10 pod replicas depending on an active 60\% CPU utilization threshold. Additionally, the CloudNativePG operator manages a primary and replica streaming PostgreSQL database configuration. This provides near-instant continuous failover capabilities and read/write splitting, ensuring zero downtime even during unexpected node failures.
 \subsection{Software Life Cycle \& Agile}
@@ -156,6 +185,12 @@ Fig.~\ref{fig:autoscale2} presents the corresponding Prometheus-powered Grafana 
 \subsection{Reliability \& Resilience}
 From a reliability perspective, the architecture maintained service continuity through decoupling and managed failover components. CloudNativePG provided resilient database operation with a primary-replica topology capable of automatic failover. Asynchronous messaging via Pub/Sub prevented transient producer-consumer imbalance from causing data loss — during scaling events, unprocessed messages remained durable in the subscription and were consumed once pod capacity recovered, preserving at-least-once delivery semantics.
 
+While the system was primarily designed to demonstrate architectural scalability and resilience, performance characteristics were also evaluated qualitatively. Streaming pipelines are capable of processing high volumes of telemetry events due to their distributed processing model. Each stage of the pipeline can scale independently depending on system load.
+
+For instance, the number of Dataflow workers can be increased to support higher data ingestion rates, while Kubernetes autoscaling mechanisms adjust the number of active processing pods in response to increased CPU utilization. This distributed processing model enables the system to handle larger sensor deployments without significant architectural redesign.
+
+Future performance testing could involve benchmarking the system under large-scale simulated IoT workloads. Such tests would evaluate metrics such as throughput, latency, and system resource utilization. These experiments would provide deeper insights into the maximum sustainable workload capacity of the platform.
+
 Overall, the test outcomes demonstrate that the proposed cloud-native design is suitable for variable IoT workloads, with elastic scaling, fault-tolerant storage, and full-stack observability operating cohesively under realistic conditions.
 
 \section{Conclusion}
@@ -173,6 +208,9 @@ The implementation reinforces key professional competencies: Infrastructure as C
 \bibitem{truong2015iotcloud} H.-L. Truong and S. Dustdar, ``Principles for Engineering IoT Cloud Systems,'' \textit{IEEE Cloud Computing}, vol. 2, no. 2, pp. 68--76, Mar. 2015. doi: 10.1109/MCC.2015.23.
 \bibitem{gannon2017cloudnative} D. Gannon, R. Barga, and N. Sundaresan, ``Cloud-Native Applications,'' \textit{IEEE Cloud Computing}, vol. 4, no. 5, pp. 16--21, Sep. 2017. doi: 10.1109/MCC.2017.4250939.
 \bibitem{naik2017protocols} N. Naik, ``Choice of effective messaging protocols for IoT systems: MQTT, CoAP, AMQP and HTTP,'' in \textit{2017 IEEE Systems Engineering Symposium (SysEng)}, 2017, pp. 1--7. doi: 10.1109/SysEng.2017.8088251.
+\bibitem{kubernetes2018} B. Burns, B. Grant, D. Oppenheimer, E. Brewer, and J. Wilkes, ``Borg, Omega, and Kubernetes,'' \textit{Communications of the ACM}, vol. 59, no. 5, pp. 50--57, 2018. Available: https://static.googleusercontent.com/media/research.google.com/en//pubs/archive/44843.pdf
+\bibitem{prometheus2018}
+J. Turnbull, ``The Prometheus Monitoring System,'' \textit{O'Reilly Media}, 2018. Available: https://www.scribd.com/document/490149037/turnbull-james-monitoring-with-prometheus-pdf
 \end{thebibliography}
 
 \end{document}
