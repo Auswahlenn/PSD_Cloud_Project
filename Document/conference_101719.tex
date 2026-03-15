@@ -126,17 +126,43 @@ Terraform-based Infrastructure as Code (IaC) was central to the software life cy
 \section{Results, Testing \& Evaluation}
 % Demonstrate that your architecture functions with continuity.
 % Discuss performance testing, cloud scalability validation, or how the technical solution practically performs.
-The deployed platform was validated through functional and operational checks across each pipeline stage. End-to-end continuity was confirmed by publishing simulated MQTT telemetry, observing successful forwarding through Dataflow and Pub/Sub, and verifying that gRPC consumers persisted records into PostgreSQL. Dashboard validation in Grafana confirmed correct time-series rendering and query behavior over live database updates.
 
-Scalability behavior was evaluated under increased publish frequency and sensor concurrency. During higher input rates, Pub/Sub provided effective buffering while GKE Horizontal Pod Autoscaling increased consumer replicas according to CPU pressure, subject to available node capacity. Dataflow streaming workers handled sustained ingestion and transformation, while system observability through Prometheus and Grafana enabled rapid detection of bottlenecks such as pending pods caused by temporary CPU constraints.
+\subsection{End-to-End Pipeline Validation}
+The deployed platform was validated through functional and operational checks across each pipeline stage. End-to-end continuity was confirmed by publishing simulated MQTT telemetry from five concurrent sensors, observing successful forwarding through Dataflow and Pub/Sub, and verifying that gRPC consumers persisted records into PostgreSQL. As shown in Fig.~\ref{fig:pipeline}, the Grafana dashboard renders live temperature time-series data, message throughput counts, and an average temperature gauge — all populated directly from the PostgreSQL backend. The terminal alongside confirms the active MQTT publish session and successful pod operation, demonstrating unbroken data flow from edge to dashboard.
 
-From a reliability perspective, the architecture maintained service continuity through decoupling and managed failover components. CloudNativePG provided resilient database operation with primary-replica topology, and asynchronous messaging prevented transient producer-consumer imbalance from causing data loss. Overall, the test outcomes demonstrate that the proposed cloud-native design is suitable for variable IoT workloads and can be iteratively optimized for production-grade throughput.
+\begin{figure}[htbp]
+\centerline{\includegraphics[width=\linewidth]{PipeLineView.png}}
+\caption{Live pipeline demonstration: Grafana dashboard displaying real-time temperature data (left), terminal showing active MQTT publishing and Kubernetes pod status (right).}
+\label{fig:pipeline}
+\end{figure}
+
+\subsection{Autoscaling Evaluation}
+Scalability behavior was evaluated by inducing sustained CPU load on the gRPC consumer pods. When CPU utilization exceeded the 60\% HPA threshold, Kubernetes automatically increased gRPC server replicas from the baseline of 2 up to 8 pods within approximately 30 seconds. Fig.~\ref{fig:autoscale1} captures this scaling event, showing multiple new pods transitioning to \texttt{Running} status while additional pods remain \texttt{Pending} due to node-level CPU capacity constraints — a correct and expected response from the cluster autoscaler under a free-tier resource ceiling.
+
+\begin{figure}[htbp]
+\centerline{\includegraphics[width=\linewidth]{AutoScaling.png}}
+\caption{Horizontal Pod Autoscaler scaling gRPC server replicas from 2 to 8 pods under sustained CPU load.}
+\label{fig:autoscale1}
+\end{figure}
+
+Fig.~\ref{fig:autoscale2} presents the corresponding Prometheus-powered Grafana dashboard alongside the terminal output during the scaling event. The CPU usage chart shows a clear spike triggering the HPA response, while the memory and pod count gauges reflect the increased replica count. This confirms that the observability stack (Prometheus and Grafana) provides real-time visibility into scaling decisions, enabling operators to detect bottlenecks such as pending pods caused by temporary node CPU constraints.
+
+\begin{figure}[htbp]
+\centerline{\includegraphics[width=\linewidth]{Autoscaling2.png}}
+\caption{Prometheus monitoring dashboard showing CPU and memory metrics during autoscaling, with terminal HPA output (right).}
+\label{fig:autoscale2}
+\end{figure}
+
+\subsection{Reliability \& Resilience}
+From a reliability perspective, the architecture maintained service continuity through decoupling and managed failover components. CloudNativePG provided resilient database operation with a primary-replica topology capable of automatic failover. Asynchronous messaging via Pub/Sub prevented transient producer-consumer imbalance from causing data loss — during scaling events, unprocessed messages remained durable in the subscription and were consumed once pod capacity recovered, preserving at-least-once delivery semantics.
+
+Overall, the test outcomes demonstrate that the proposed cloud-native design is suitable for variable IoT workloads, with elastic scaling, fault-tolerant storage, and full-stack observability operating cohesively under realistic conditions.
 
 \section{Conclusion}
 % Summarize the impact of your cloud-native architecture, how it achieved the intended learning outcomes, and potential future improvements.
-This project demonstrates how a cloud-native redesign can transform a single-node IoT prototype into a scalable, resilient, and observable distributed platform on GCP. By integrating MQTT ingestion, Dataflow streaming, Pub/Sub decoupling, autoscaled gRPC processing, and highly available PostgreSQL, the system addresses core limitations of monolithic deployment models and supports real-time analytics through Grafana.
+This project demonstrates how a cloud-native redesign can transform a single-node IoT prototype into a scalable, resilient, and observable distributed platform on GCP. By integrating MQTT ingestion, Dataflow streaming, Pub/Sub decoupling, autoscaled gRPC processing, and highly available PostgreSQL, the system addresses core limitations of monolithic deployment models. As validated in our testing, the full pipeline successfully ingests simulated sensor data and renders live analytics in Grafana, while Kubernetes HPA dynamically scales processing capacity in response to load — confirming that the architecture meets its design goals for scalability and resilience.
 
-The implementation also reinforces key professional competencies: Infrastructure as Code for reproducible environments, container orchestration for elastic service management, and metrics-driven operations for reliability engineering. Future improvements include workload-aware autoscaling tuning, stronger security hardening for production deployment, and cost optimization through environment sleep-mode automation and policy-based resource scheduling.
+The implementation reinforces key professional competencies: Infrastructure as Code via Terraform for reproducible environments, container orchestration for elastic service management, and metrics-driven operations through Prometheus and Grafana for reliability engineering. Future improvements include workload-aware autoscaling tuning with custom metrics (e.g., Pub/Sub backlog depth), stronger security hardening such as mutual TLS between services, and cost optimization through environment sleep-mode automation and policy-based resource scheduling.
 
 \section*{References \& AI Citations}
 % CRITICAL PLAGIARISM RULE: The specification strictly requires that "If any materials in the submission are created by generative artificial intelligence, student must clearly cite them in the report and submitted materials." Make sure to include citations here if you use AI tools for code or text generation.
