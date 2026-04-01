@@ -198,13 +198,14 @@ python fake_temperature_publisher.py --host <MQTT_BROKER_IP> --sensors 10 --inte
    - Query (Code mode):
      ```sql
      SELECT
-       $__timeGroup(time, '5s') AS "time",
-       device,
-       AVG(value) AS value
-     FROM temperatures
-     WHERE $__timeFilter(time)
-     GROUP BY 1, device
-     ORDER BY 1
+      $__timeGroup(time, '5s') AS "time",
+      device,
+      AVG(value) AS value
+    FROM temperatures
+    WHERE $__timeFilter(time)
+    GROUP BY 1, device
+    ORDER BY time ASC
+
      ```
    - Format as: **Time series**
    - Each sensor appears as a separate colored line
