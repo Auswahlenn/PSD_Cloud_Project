@@ -20,7 +20,7 @@ flowchart LR
         subgraph EdgeGateway ["Edge Gateway"]
             direction TB
             subgraph MQTTCluster ["MQTT Broker Cluster (HA)"]
-                EMQX["EMQX Cluster<br/>(GKE StatefulSet, 3 nodes)"]:::broker
+                EMQX["eclipse-mosquitto<br/>(GKE StatefulSet, 3 nodes)"]:::broker
             end
         end
 
@@ -37,7 +37,7 @@ flowchart LR
         subgraph BackendApp ["Backend Applications / IoT"]
             direction TB
             subgraph GKE ["Google Kubernetes Engine"]
-                GRPC["Go gRPC Server<br/>(PostgreSQL Writer)"]:::app
+                GRPC["Go gRPC Server<br/>(Subscriber & API)"]:::app
                 ML["ML Service<br/>(Vertex AI Predictions)"]:::app
                 DW["BigQuery Connector<br/>(Data Warehouse)"]:::app
                 CNPG[("PostgreSQL<br/>(CloudNativePG HA)")]:::db
@@ -61,12 +61,12 @@ flowchart LR
     EMQX -->|"MQTT Connector"| KafkaConn
     KafkaConn --> P1 & P2 & P3
 
-    P1 -->|"Consumer Group"| GRPC
-    P1 -->|"Consumer Group"| ML
+    P1 & P2 & P3 -->|"Consumer Group"| GRPC
     P1 & P2 & P3 -->|"Consumer Group"| DW
 
+    GRPC -->|"gRPC call"| ML
     GRPC -->|"SQL Batch Insert"| CNPG
-    ML -->|"Predictions"| CNPG
+    ML -->|"Predictions stored"| CNPG
     DW -->|"Stream"| BQ
 
     CNPG -.->|"Time-Series Queries"| Grafana
